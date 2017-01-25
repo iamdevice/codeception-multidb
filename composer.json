@@ -1,0 +1,23 @@
+{
+  "name": "iamdevice/codeception-multidb",
+  "description": "Codeception extension for work with multiple databases",
+  "version": "1.0-beta",
+  "type": "library",
+  "minimum-stability": "stable",
+  "prefer-stable": true,
+  "authors": [
+    {
+      "name": "Aleksandr Kozhevnikov",
+      "email": "akozhevnikov@cstech.ru"
+    }
+  ],
+  "require": {
+    "php": ">=5.6.0",
+    "codeception/codeception": "^2.2"
+  },
+  "autoload": {
+    "psr-4": {
+      "Codeception\\Exception\\": "src/codeception/multidb/"
+    }
+  }
+}
