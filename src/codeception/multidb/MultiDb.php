@@ -1,6 +1,6 @@
 <?php
 
-namespace Codeception\Exception;
+namespace Codeception\Extension;
 
 use Codeception\Lib\Driver\Db;
 use Codeception\Module;
