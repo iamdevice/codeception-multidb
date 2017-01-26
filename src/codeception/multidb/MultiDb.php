@@ -463,7 +463,7 @@ class MultiDb extends CodeceptionModule implements DbInterface
      * @param string $table Table name
      * @param array $criteria Search criteria
      */
-    public function dontSeeInDatabase($table, array $criteria = [])
+    public function dontSeeInDatabase($table, $criteria = [])
     {
         $count = $this->countInDatabase($table, $criteria);
         $this->assertLessThan(
