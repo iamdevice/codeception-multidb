@@ -112,7 +112,7 @@ class MultiDb extends Module
 
     private function readSql($connection)
     {
-        if (!file_exists(Configuration::projectDir() . $this->config['dump'])) {
+        if (!file_exists(Configuration::projectDir() . $this->config['connections'][$connection]['dump'])) {
             throw new ModuleConfigException(
                 __CLASS__,
                 "\nFile with dump doesn't exist.\n"
@@ -121,7 +121,7 @@ class MultiDb extends Module
             );
         }
 
-        $sql = file_get_contents(Configuration::projectDir() . $this->config['dump']);
+        $sql = file_get_contents(Configuration::projectDir() . $this->config['connections'][$connection]['dump']);
 
         // remove C-style comments (except MySQL directives)
         $sql = preg_replace('%/\*(?!!\d+).*?\*/%s', '', $sql);
