@@ -8,7 +8,6 @@ use Codeception\Exception\ModuleException;
 use Codeception\Lib\Driver\Db as Driver;
 use Codeception\Module as CodeceptionModule;
 use Codeception\TestInterface;
-use Doctrine\Instantiator\Exception\InvalidArgumentException;
 use Codeception\Lib\Interfaces\Db as DbInterface;
 
 /**
@@ -386,7 +385,7 @@ class MultiDb extends CodeceptionModule implements DbInterface
                     if (isset($row[$column])) {
                         $primary[$column] = $row[$column];
                     } else {
-                        throw new InvalidArgumentException("Primary key field {$column} is not set for table {$table}");
+                        throw new \InvalidArgumentException("Primary key field {$column} is not set for table {$table}");
                     }
                 }
             }
