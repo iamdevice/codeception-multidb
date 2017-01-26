@@ -86,6 +86,8 @@ class MultiDb extends Module
                             Please, update the configuration and set all the required fields\n\n"
                     );
                 }
+
+                $this->insertedRows[$db] = [];
             }
         }
 
