@@ -1,7 +1,7 @@
 {
   "name": "iamdevice/codeception-multidb",
   "description": "Codeception extension for work with multiple databases",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "type": "library",
   "minimum-stability": "stable",
   "prefer-stable": true,
