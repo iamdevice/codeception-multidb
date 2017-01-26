@@ -351,4 +351,13 @@ class MultiDb extends Module
     {
         return $this->countInDatabase($table, $criteria);
     }
+
+    public function checkDatabaseInConfig($connection)
+    {
+        $this->assertArrayHasKey(
+            $connection,
+            $this->drivers,
+            "No match found {$connection} on " . json_encode($this->drivers)
+        );
+    }
 }
