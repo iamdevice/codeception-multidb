@@ -7,6 +7,8 @@ use Codeception\Exception\ModuleConfigException;
 use Codeception\Exception\ModuleException;
 use Codeception\Lib\Driver\Db as Driver;
 use Codeception\Module;
+use Codeception\TestInterface;
+use Doctrine\Instantiator\Exception\InvalidArgumentException;
 
 class MultiDb extends Module
 {
@@ -14,6 +16,16 @@ class MultiDb extends Module
      * @var array
      */
     public $connections = [];
+
+    /**
+     * @var \PDO
+     */
+    protected $currentConnection;
+
+    /**
+     * @var Driver
+     */
+    protected $currentDriver;
 
     /**
      * @var Driver[]
@@ -177,5 +189,162 @@ class MultiDb extends Module
     {
         unset($this->connections[$connection]);
         unset($this->drivers[$connection]);
+    }
+
+    public function _before(TestInterface $test)
+    {
+        foreach ($this->config['connections'] as $db => $connectionConfig) {
+            if ($connectionConfig['reconnect']) {
+                $this->connect($db);
+            }
+
+            if ($connectionConfig['cleanup'] && !$this->populated[$db]) {
+                $this->cleanup($db);
+                $this->loadDump($db);
+            }
+        }
+
+        parent::_before($test);
+    }
+
+    public function _after(TestInterface $test)
+    {
+        foreach ($this->config['connections'] as $db => $connectionConfig) {
+            $this->populated[$db] = false;
+            $this->removeInserted($db);
+
+            if ($connectionConfig['reconnect']) {
+                $this->disconnect($db);
+            }
+        }
+
+        parent::_after($test);
+    }
+
+    protected function removeInserted($connection)
+    {
+        foreach (array_reverse($this->insertedRows[$connection]) as $row) {
+            try {
+                $this->drivers[$connection]->deleteQueryByCriteria($row['table'], $row['primary']);
+            } catch (\Exception $e) {
+                $this->debug("couldn't delete record " . json_encode($row['primary']) ." from {$row['table']}");
+            }
+
+            $this->insertedRows[$connection] = [];
+        }
+    }
+
+    public function amConnectedToDatabase($database) {
+        $this->currentConnection = $database;
+        $this->currentDriver = $this->drivers[$database];
+    }
+
+    public function haveInDatabase($table, array $data)
+    {
+        $query = $this->currentDriver->insert($table, $data);
+        $params = array_values($data);
+        $this->debugSection('Query', $query);
+        $this->debugSection('Parameters', $params);
+        $this->currentDriver->executeQuery($query, $params);
+
+        try {
+            $lastInsertId = (int)$this->currentDriver->lastInsertId($table);
+        } catch (\PDOException $e) {
+            $lastInsertId = 0;
+        }
+
+        $this->lastInsertedRow($this->currentConnection, $table, $data, $lastInsertId);
+
+        return $lastInsertId;
+    }
+
+    private function lastInsertedRow($connection, $table, array $row, $id)
+    {
+        $primaryKey = $this->currentDriver->getPrimaryKey($table);
+        $primary = [];
+        if ($primaryKey) {
+            if ($id && count($primaryKey) === 1) {
+                $primary[$primaryKey[0]] = $id;
+            } else {
+                foreach ($primaryKey as $column) {
+                    if (isset($row[$column])) {
+                        $primary[$column] = $row[$column];
+                    } else {
+                        throw new InvalidArgumentException("Primary key field {$column} is not set for table {$table}");
+                    }
+                }
+            }
+        } else {
+            $primary = $row;
+        }
+
+        $this->insertedRows[$connection][] = [
+            'table' => $table,
+            'primary' => $primary
+        ];
+    }
+
+    public function seeInDatabase($table, array $criteria = [])
+    {
+        $result = $this->countInDatabase($table, $criteria);
+        $this->assertGreaterThan(
+            0,
+            $result,
+            'No matching records found for criteria ' . json_encode($criteria) . ' in table ' . $table
+        );
+    }
+
+    public function seeNumRecords($expectedNumber, $table, array $criteria = [])
+    {
+        $actualNumber = $this->countInDatabase($table, $criteria);
+        $this->assertEquals(
+            $expectedNumber,
+            $actualNumber,
+            sprintf(
+                'The number of found rows (%d) does not match expected number %d for criteria %s in table %s',
+                $actualNumber,
+                $expectedNumber,
+                json_encode($criteria),
+                $table
+            )
+        );
+    }
+
+    public function dontSeeInDatabase($table, array $criteria = [])
+    {
+        $count = $this->countInDatabase($table, $criteria);
+        $this->assertLessThan(
+            1,
+            $count,
+            'Unexpectedly found matching records for criteria ' . json_encode($criteria) . ' in table ' . $table
+        );
+    }
+
+    protected function countInDatabase($table, array $criteria = [])
+    {
+        return (int)$this->proceedSeeInDatabase($table, 'count(*)', $criteria);
+    }
+
+    protected function proceedSeeInDatabase($table, $column, array $criteria = [])
+    {
+        $query = $this->currentDriver->select($column, $table, $criteria);
+        $params = array_values($criteria);
+        $this->debugSection('Query', $query);
+        if (!empty($params)) {
+            $this->debugSection('Parameters', $params);
+        }
+        $sth = $this->currentDriver->executeQuery($query, $params);
+
+        return $sth->fetchColumn();
+    }
+
+    public function grabFromDatabase($table, $column, $criteria = [])
+    {
+        return $this->proceedSeeInDatabase($table, $column, $criteria);
+    }
+
+    public function grabNumRecords($table, array $criteria = [])
+    {
+        return $this->countInDatabase($table, $criteria);
     }
 }
