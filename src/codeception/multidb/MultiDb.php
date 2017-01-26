@@ -112,16 +112,18 @@ class MultiDb extends Module
 
     private function readSql($connection)
     {
-        if (!file_exists(Configuration::projectDir() . $this->config['connections'][$connection]['dump'])) {
+        $config = $this->config['connections'][$connection];
+
+        if (!file_exists(Configuration::projectDir() . $config['dump'])) {
             throw new ModuleConfigException(
                 __CLASS__,
                 "\nFile with dump doesn't exist.\n"
                 . "Please, check path for sql file: "
-                . $this->config['dump']
+                . $config['dump']
             );
         }
 
-        $sql = file_get_contents(Configuration::projectDir() . $this->config['connections'][$connection]['dump']);
+        $sql = file_get_contents(Configuration::projectDir() . $config['dump']);
 
         // remove C-style comments (except MySQL directives)
         $sql = preg_replace('%/\*(?!!\d+).*?\*/%s', '', $sql);
@@ -179,7 +181,7 @@ class MultiDb extends Module
             $msg = $e->getMessage();
 
             if ($msg == 'could not find driver') {
-                list ($missingDriver, ) = explode(':', $this->config['dsn'], 2);
+                list ($missingDriver, ) = explode(':', $config['dsn'], 2);
                 $msg = "could not find {$missingDriver} driver";
             }
 
