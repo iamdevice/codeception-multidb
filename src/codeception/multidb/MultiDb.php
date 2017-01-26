@@ -6,14 +6,96 @@ use Codeception\Configuration;
 use Codeception\Exception\ModuleConfigException;
 use Codeception\Exception\ModuleException;
 use Codeception\Lib\Driver\Db as Driver;
-use Codeception\Module;
+use Codeception\Module as CodeceptionModule;
 use Codeception\TestInterface;
 use Doctrine\Instantiator\Exception\InvalidArgumentException;
+use Codeception\Lib\Interfaces\Db as DbInterface;
 
-class MultiDb extends Module
+/**
+ * Works with multiple SQL databases.
+ *
+ * based on original Db Module
+ *
+ * ## Config
+ *
+ * * connectionName:
+ * * * dsn *required* - PDO DSN
+ * * * user *required* - user to access database
+ * * * password *required* - password
+ * * * dump - path to database dump
+ * * * populate: true - whether the the dump should be loaded before the test suite is started
+ * * * cleanup: true - whether the dump should be reloaded before each test
+ * *  *reconnect: false - whether the module should reconnect to the database before each test
+ *
+ * ## Example
+ *
+ *     modules:
+ *        enabled:
+ *           - MultiDb:
+ *              primary:
+ *                  dsn: 'mysql:host=localhost;dbname=testdb'
+ *                  user: 'root'
+ *                  password: ''
+ *                  dump: 'tests/_data/dump_for_primary.sql'
+ *                  populate: true
+ *                  cleanup: false
+ *                  reconnect: true
+ *
+ * ## SQL data dump
+ *
+ *  * Comments are permitted.
+ *  * The `dump.sql` may contain multiline statements.
+ *  * The delimiter, a semi-colon in this case, must be on the same line as the last statement:
+ *
+ * ```sql
+ * -- Add a few contacts to the table.
+ * REPLACE INTO `Contacts` (`created`, `modified`, `status`, `contact`, `first`, `last`) VALUES
+ * (NOW(), NOW(), 1, 'Bob Ross', 'Bob', 'Ross'),
+ * (NOW(), NOW(), 1, 'Fred Flintstone', 'Fred', 'Flintstone');
+ *
+ * -- Remove existing orders for testing.
+ * DELETE FROM `Order`;
+ * ```
+ * ## Query generation
+ *
+ * seeInDatabase, dontSeeInDatabase, seeNumRecords, grabFromDatabase and grabNumRecords methods
+ * accept arrays as criteria. WHERE condition is generated using item key as a field name and
+ * item value as a field value.
+ *
+ * Example:
+ * ```php
+ * <?php
+ * $I->seeInDatabase('users', array('name' => 'Davert', 'email' => 'davert@mail.com'));
+ *
+ * ```
+ * Will generate:
+ *
+ * ```sql
+ * SELECT COUNT(*) FROM `users` WHERE `name` = 'Davert' AND `email` = 'davert@mail.com'
+ * ```
+ * New addition to 2.1.9 is ability to use LIKE in condition. It is achieved by adding ' like' to column name.
+ *
+ * Example:
+ * ```php
+ * <?php
+ * $I->seeInDatabase('users', array('name' => 'Davert', 'email like' => 'davert%'));
+ *
+ * ```
+ * Will generate:
+ *
+ * ```sql
+ * SELECT COUNT(*) FROM `users` WHERE `name` = 'Davert' AND `email` LIKE 'davert%'
+ * ```
+ * ## Public Properties
+ * * dbh - contains the PDO connection
+ * * driver - contains the Connection Driver
+ *
+ */
+
+class MultiDb extends CodeceptionModule implements DbInterface
 {
     /**
-     * @var array
+     * @var \PDO[]
      */
     public $connections = [];
 
@@ -138,7 +220,7 @@ class MultiDb extends Module
 
     protected function cleanup($connection)
     {
-        $dbh = $this->drivers[$connection];
+        $dbh = $this->drivers[$connection]->getDbh();
         if (!$dbh) {
             throw new ModuleConfigException(
                 __CLASS__,
@@ -242,11 +324,37 @@ class MultiDb extends Module
         }
     }
 
+    /**
+     * Select connection
+     * This method must be first before other data tests
+     *
+     * ```php
+     * <?php
+     * $I->amConnectedToDatabase('primary');
+     * ?>
+     * ```
+     *
+     * @param $database string
+     */
     public function amConnectedToDatabase($database) {
         $this->currentConnection = $database;
         $this->currentDriver = $this->drivers[$database];
     }
 
+    /**
+     * Inserts an SQL record into a database. This record will be erased after the test.
+     *
+     * ```php
+     * <?php
+     * $I->haveInDatabase('users', array('name' => 'miles', 'email' => 'miles@davis.com'));
+     * ?>
+     * ```
+     *
+     * @param string $table
+     * @param array $data
+     *
+     * @return integer $id
+     */
     public function haveInDatabase($table, array $data)
     {
         $query = $this->currentDriver->insert($table, $data);
@@ -261,12 +369,12 @@ class MultiDb extends Module
             $lastInsertId = 0;
         }
 
-        $this->lastInsertedRow($this->currentConnection, $table, $data, $lastInsertId);
+        $this->addInsertedRow($this->currentConnection, $table, $data, $lastInsertId);
 
         return $lastInsertId;
     }
 
-    private function lastInsertedRow($connection, $table, array $row, $id)
+    private function addInsertedRow($connection, $table, array $row, $id)
     {
         $primaryKey = $this->currentDriver->getPrimaryKey($table);
         $primary = [];
@@ -292,7 +400,19 @@ class MultiDb extends Module
         ];
     }
 
-    public function seeInDatabase($table, array $criteria = [])
+    /**
+     * Select data from database by criteria
+     *
+     * ```php
+     * <?php
+     * $I->seeInDatabase('users', array('name' => 'Davert', 'email like' => 'davert%'));
+     * ?>
+     * ```
+     *
+     * @param string $table
+     * @param array $criteria
+     */
+    public function seeInDatabase($table, $criteria = [])
     {
         $result = $this->countInDatabase($table, $criteria);
         $this->assertGreaterThan(
@@ -302,6 +422,19 @@ class MultiDb extends Module
         );
     }
 
+    /**
+     * Asserts that the given number of records were found in the database.
+     *
+     * ```php
+     * <?php
+     * $I->seeNumRecords(1, 'users', ['name' => 'davert'])
+     * ?>
+     * ```
+     *
+     * @param int $expectedNumber Expected number
+     * @param string $table Table name
+     * @param array $criteria Search criteria [Optional]
+     */
     public function seeNumRecords($expectedNumber, $table, array $criteria = [])
     {
         $actualNumber = $this->countInDatabase($table, $criteria);
@@ -318,6 +451,18 @@ class MultiDb extends Module
         );
     }
 
+    /**
+     * Asserts that the record was not found in database.
+     *
+     * ```php
+     * <?php
+     * $I->dontSeeInDatabase('users', ['name' => 'davert'])
+     * ?>
+     * ```
+     *
+     * @param string $table Table name
+     * @param array $criteria Search criteria
+     */
     public function dontSeeInDatabase($table, array $criteria = [])
     {
         $count = $this->countInDatabase($table, $criteria);
@@ -351,11 +496,24 @@ class MultiDb extends Module
         return $this->proceedSeeInDatabase($table, $column, $criteria);
     }
 
+    /**
+     * Returns the number of rows in a database
+     *
+     * @param string $table    Table name
+     * @param array  $criteria Search criteria [Optional]
+     *
+     * @return int
+     */
     public function grabNumRecords($table, array $criteria = [])
     {
         return $this->countInDatabase($table, $criteria);
     }
 
+    /**
+     * Checking connection in config
+     *
+     * @param string $connection
+     */
     public function checkDatabaseInConfig($connection)
     {
         $this->assertArrayHasKey(
@@ -365,6 +523,12 @@ class MultiDb extends Module
         );
     }
 
+    /**
+     * Run plain sql queries as PDO Statement
+     *
+     * @param string $query
+     * @param array $params
+     */
     public function amRunPlainSql($query, array $params = [])
     {
         $this->debugSection('Query', $query);
