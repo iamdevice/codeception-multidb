@@ -174,7 +174,7 @@ class MultiDb extends Module
         $config = $this->config['connections'][$connection];
 
         try {
-            $this->drivers[$connection] = Driver::connect($config['dsn'], $config['user'], $config['password']);
+            $this->drivers[$connection] = Driver::create($config['dsn'], $config['user'], $config['password']);
         } catch (\PDOException $e) {
             $msg = $e->getMessage();
 
