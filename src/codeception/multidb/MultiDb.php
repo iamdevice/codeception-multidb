@@ -69,7 +69,11 @@ class MultiDb extends Module
             foreach ($this->config['connections'] as $db => $connectionConfig) {
                 $params = array_keys($connectionConfig);
 
-                $this->populated[$db] = $connectionConfig['populate'];
+                if (isset($connectionConfig['populate'])) {
+                    $this->populated[$db] = $connectionConfig['populate'];
+                } else {
+                    $this->populated[$db] = true;
+                }
 
                 if (array_intersect($this->connectionRequiredFields, $params) == $this->connectionRequiredFields) {
                     $validConfig = true;
