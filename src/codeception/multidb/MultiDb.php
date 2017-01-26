@@ -528,12 +528,14 @@ class MultiDb extends CodeceptionModule implements DbInterface
      *
      * @param string $query
      * @param array $params
+     *
+     * @return \PDOStatement
      */
     public function amRunPlainSql($query, array $params = [])
     {
         $this->debugSection('Query', $query);
         $this->debugSection('Parameters', $params);
 
-        $this->currentDriver->executeQuery($query, $params);
+        return $this->currentDriver->executeQuery($query, $params);
     }
 }
