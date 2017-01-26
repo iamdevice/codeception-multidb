@@ -1,6 +1,6 @@
 <?php
 
-namespace Codeception\Extension;
+namespace Codeception\Module;
 
 use Codeception\Configuration;
 use Codeception\Exception\ModuleConfigException;
