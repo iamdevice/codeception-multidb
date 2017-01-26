@@ -364,4 +364,12 @@ class MultiDb extends Module
             "No match found {$connection} on " . json_encode($this->drivers)
         );
     }
+
+    public function amRunPlainSql($query, array $params = [])
+    {
+        $this->debugSection('Query', $query);
+        $this->debugSection('Parameters', $params);
+
+        $this->currentDriver->executeQuery($query, $params);
+    }
 }
