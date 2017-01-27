@@ -185,24 +185,32 @@ class MultiDb extends CodeceptionModule implements DbInterface
             }
         }
 
-        foreach ($this->config['connections'] as $db => $connectionConfig) {
-            $this->connect($db);
+        if ($validConfig) {
+            foreach ($this->config['connections'] as $db => $connectionConfig) {
+                $this->connect($db);
 
-            if ($connectionConfig['dump'] && ($connectionConfig['populate'] || $connectionConfig['cleanup'])) {
-                $this->readSql($db);
-            }
-
-            if ($connectionConfig['populate']) {
-                if ($connectionConfig['cleanup']) {
-                    $this->cleanup($db);
+                if ($connectionConfig['dump'] && ($connectionConfig['populate'] || $connectionConfig['cleanup'])) {
+                    $this->readSql($db);
                 }
 
-                $this->loadDump($db);
-            }
+                if ($connectionConfig['populate']) {
+                    if ($connectionConfig['cleanup']) {
+                        $this->cleanup($db);
+                    }
 
-            if ($connectionConfig['reconnect']) {
-                $this->disconnect($db);
+                    $this->loadDump($db);
+                }
+
+                if ($connectionConfig['reconnect']) {
+                    $this->disconnect($db);
+                }
             }
+        } else {
+            throw new ModuleConfigException(
+                __CLASS__,
+                "\nOptions: " . implode(', ', $this->requiredFields) . " are required\n
+                    Please, update the configuration and set all the required fields\n\n"
+            );
         }
     }
 
