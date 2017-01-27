@@ -153,7 +153,20 @@ class MultiDb extends CodeceptionModule implements DbInterface
                 if (isset($connectionConfig['populate'])) {
                     $this->populated[$db] = $connectionConfig['populate'];
                 } else {
+                    $this->config['connections'][$db]['populate'] = true;
                     $this->populated[$db] = true;
+                }
+
+                if (!isset($connectionConfig['dump'])) {
+                    $this->config['connections'][$db]['dump'] = null;
+                }
+
+                if (!isset($connectionConfig['cleanup'])) {
+                    $this->config['connections'][$db]['cleanup'] = false;
+                }
+
+                if (!isset($connectionConfig['reconnect'])) {
+                    $this->config['connections'][$db]['reconnect'] = false;
                 }
 
                 if (array_intersect($this->connectionRequiredFields, $params) == $this->connectionRequiredFields) {
