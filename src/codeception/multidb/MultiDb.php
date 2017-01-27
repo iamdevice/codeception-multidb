@@ -142,6 +142,30 @@ class MultiDb extends CodeceptionModule implements DbInterface
      */
     protected $populated = [];
 
+    private function checkConfig()
+    {
+        foreach ($this->config['connections'] as $db => $connectionConfig) {
+            if (array_key_exists('populate', $connectionConfig)) {
+                $this->populated[$db] = $connectionConfig['populate'];
+            } else {
+                $this->config['connections'][$db]['populate'] = true;
+                $this->populated[$db] = true;
+            }
+
+            if (!array_key_exists('dump', $connectionConfig)) {
+                $this->config['connections'][$db]['dump'] = null;
+            }
+
+            if (!array_key_exists('cleanup', $connectionConfig)) {
+                $this->config['connections'][$db]['cleanup'] = false;
+            }
+
+            if (!array_key_exists('reconnect', $connectionConfig)) {
+                $this->config['connections'][$db]['reconnect'] = false;
+            }
+        }
+    }
+
     public function _initialize()
     {
         $validConfig = false;
@@ -150,24 +174,7 @@ class MultiDb extends CodeceptionModule implements DbInterface
             foreach ($this->config['connections'] as $db => $connectionConfig) {
                 $params = array_keys($connectionConfig);
 
-                if (isset($connectionConfig['populate'])) {
-                    $this->populated[$db] = $connectionConfig['populate'];
-                } else {
-                    $this->config['connections'][$db]['populate'] = true;
-                    $this->populated[$db] = true;
-                }
-
-                if (!isset($connectionConfig['dump'])) {
-                    $this->config['connections'][$db]['dump'] = null;
-                }
-
-                if (!isset($connectionConfig['cleanup'])) {
-                    $this->config['connections'][$db]['cleanup'] = false;
-                }
-
-                if (!isset($connectionConfig['reconnect'])) {
-                    $this->config['connections'][$db]['reconnect'] = false;
-                }
+                $this->checkConfig();
 
                 if (array_intersect($this->connectionRequiredFields, $params) == $this->connectionRequiredFields) {
                     $validConfig = true;
@@ -303,6 +310,8 @@ class MultiDb extends CodeceptionModule implements DbInterface
 
     public function _before(TestInterface $test)
     {
+        $this->checkConfig();
+
         foreach ($this->config['connections'] as $db => $connectionConfig) {
             if ($connectionConfig['reconnect']) {
                 $this->connect($db);
