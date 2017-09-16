@@ -600,9 +600,28 @@ class MultiDb extends CodeceptionModule implements DbInterface
     }
 
     /**
+     * Truncate table in DB
+     *
+     * @param string $table
+     *
+     * @throws ModuleException
+     */
+    public function amTruncateTable($table)
+    {
+        if ($this->currentDriver instanceof MySql) {
+            $dbh = $this->currentDriver->getDbh();
+            $dbh->exec('SET FOREIGN_KEY_CHECKS=0;');
+            $dbh->exec("TRUNCATE TABLE `{$table}`;");
+            $dbh->exec('SET FOREIGN_KEY_CHECKS=1;');
+        } else {
+            throw new ModuleException($this,"Don't accepted driver " . get_class($this->currentDriver));
+        }
+    }
+
+    /**
      * Load dump in test process
      *
-     * @param $connection
+     * @param string $connection
      */
     public function amLoadDump($connection)
     {
