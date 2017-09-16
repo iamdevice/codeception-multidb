@@ -1,4 +1,4 @@
-##MultiDb module for Codeception
+## MultiDb module for Codeception
 
 This module based on original Db module
 
