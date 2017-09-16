@@ -6,6 +6,7 @@ use Codeception\Configuration;
 use Codeception\Exception\ModuleConfigException;
 use Codeception\Exception\ModuleException;
 use Codeception\Lib\Driver\Db as Driver;
+use Codeception\Lib\Driver\MySql;
 use Codeception\Module as CodeceptionModule;
 use Codeception\TestInterface;
 use Codeception\Lib\Interfaces\Db as DbInterface;
@@ -160,6 +161,10 @@ class MultiDb extends CodeceptionModule implements DbInterface
                 $this->config['connections'][$db]['cleanup'] = false;
             }
 
+            if (!array_key_exists('truncate', $connectionConfig)) {
+                $this->config['connections'][$db]['truncate'] = false;
+            }
+
             if (!array_key_exists('reconnect', $connectionConfig)) {
                 $this->config['connections'][$db]['reconnect'] = false;
             }
@@ -203,6 +208,10 @@ class MultiDb extends CodeceptionModule implements DbInterface
                 if ($connectionConfig['populate']) {
                     if ($connectionConfig['cleanup']) {
                         $this->cleanup($db);
+                    }
+
+                    if ($connectionConfig['truncate']) {
+                        $this->truncate($db);
                     }
 
                     $this->loadDump($db);
@@ -266,6 +275,22 @@ class MultiDb extends CodeceptionModule implements DbInterface
         }
     }
 
+    protected function truncate($connection)
+    {
+        $driver = $this->drivers[$connection];
+        if ($driver instanceof MySql) {
+            $dbh = $driver->getDbh();
+            $dbh->exec('SET FOREIGN_KEY_CHECKS=0;');
+            $tables = $dbh->query("SHOW FULL TABLES WHERE TABLE_TYPE LIKE '%TABLE';")->fetchAll();
+            foreach ($tables as $table) {
+                $dbh->exec("TRUNCATE TABLE `{$table[0]}``;");
+            }
+            $dbh->exec('SET FOREIGN_KEY_CHECKS=1;');
+        } else {
+            throw new ModuleException($this,"Don't accepted driver " . get_class($driver));
+        }
+    }
+
     protected function loadDump($connection)
     {
         if (!array_key_exists($connection, $this->sql)) {
@@ -319,6 +344,11 @@ class MultiDb extends CodeceptionModule implements DbInterface
 
             if ($connectionConfig['cleanup'] && !$this->populated[$db]) {
                 $this->cleanup($db);
+                $this->loadDump($db);
+            }
+
+            if ($connectionConfig['truncate'] && !$this->populated[$db]) {
+                $this->truncate($db);
                 $this->loadDump($db);
             }
         }
@@ -567,5 +597,15 @@ class MultiDb extends CodeceptionModule implements DbInterface
         $this->debugSection('Parameters', $params);
 
         return $this->currentDriver->executeQuery($query, $params);
+    }
+
+    /**
+     * Load dump in test process
+     *
+     * @param $connection
+     */
+    public function amLoadDump($connection)
+    {
+        $this->loadDump($connection);
     }
 }

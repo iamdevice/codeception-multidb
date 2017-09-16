@@ -18,7 +18,7 @@ modules:
          primary:
            dsn: 'mysql:host=localhost;port=3306;dbname=database'
            user: 'username'
-           password: 'passwor'
+           password: 'password'
            dump: ''
            populate: true
            cleanup: false
