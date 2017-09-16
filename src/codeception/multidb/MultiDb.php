@@ -283,7 +283,7 @@ class MultiDb extends CodeceptionModule implements DbInterface
             $dbh->exec('SET FOREIGN_KEY_CHECKS=0;');
             $tables = $dbh->query("SHOW FULL TABLES WHERE TABLE_TYPE LIKE '%TABLE';")->fetchAll();
             foreach ($tables as $table) {
-                $dbh->exec("TRUNCATE TABLE `{$table[0]}``;");
+                $dbh->exec("TRUNCATE TABLE `{$table[0]}`;");
             }
             $dbh->exec('SET FOREIGN_KEY_CHECKS=1;');
         } else {
