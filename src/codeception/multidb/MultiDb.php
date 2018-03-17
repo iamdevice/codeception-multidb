@@ -551,6 +551,32 @@ class MultiDb extends CodeceptionModule implements DbInterface
         return $sth->fetchColumn();
     }
 
+    /**
+     * Fetches all values from the column in database.
+     * Provide table name, desired column and criteria.
+     *
+     * ``` php
+     * <?php
+     * $mails = $I->grabColumnFromDatabase('users', 'email', array('name' => 'RebOOter'));
+     * ```
+     *
+     * @param string $table
+     * @param string $column
+     * @param array $criteria
+     *
+     * @return array
+     */
+    public function grabColumnFromDatabase($table, $column, array $criteria = [])
+    {
+        $query = $this->currentDriver->select($column, $table, $criteria);
+        $parameters = array_values($criteria);
+        $this->debugSection('Query', $query);
+        $this->debugSection('Parameters', $parameters);
+        $sth = $this->currentDriver->executeQuery($query, $parameters);
+
+        return $sth->fetchAll(\PDO::FETCH_COLUMN, 0);
+    }
+
     public function grabFromDatabase($table, $column, $criteria = [])
     {
         return $this->proceedSeeInDatabase($table, $column, $criteria);
