@@ -7,6 +7,7 @@ use Codeception\Exception\ModuleConfigException;
 use Codeception\Exception\ModuleException;
 use Codeception\Lib\Driver\Db as Driver;
 use Codeception\Lib\Driver\MySql;
+use Codeception\Lib\Driver\PostgreSql;
 use Codeception\Module as CodeceptionModule;
 use Codeception\TestInterface;
 use Codeception\Lib\Interfaces\Db as DbInterface;
@@ -639,6 +640,11 @@ class MultiDb extends CodeceptionModule implements DbInterface
             $dbh->exec('SET FOREIGN_KEY_CHECKS=0;');
             $dbh->exec("TRUNCATE TABLE `{$table}`;");
             $dbh->exec('SET FOREIGN_KEY_CHECKS=1;');
+        } elseif ($this->currentDriver instanceof PostgreSql) {
+            $dbh = $this->currentDriver->getDbh();
+            $dbh->exec("ALTER TABLE `{$table}` DISABLE TRIGGER ALL;");
+            $dbh->exec("TRUNCATE TABLE `{$table}`;");
+            $dbh->exec("ALTER TABLE `{$table}` ENABLE TRIGGER ALL;");
         } else {
             throw new ModuleException($this,"Don't accepted driver " . get_class($this->currentDriver));
         }
