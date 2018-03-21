@@ -659,4 +659,12 @@ class MultiDb extends CodeceptionModule implements DbInterface
     {
         $this->loadDump($connection);
     }
+
+    /**
+     * @return Driver
+     */
+    public function getCurrentDriver()
+    {
+        return $this->currentDriver;
+    }
 }
