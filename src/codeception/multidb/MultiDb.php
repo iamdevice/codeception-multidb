@@ -101,7 +101,7 @@ class MultiDb extends CodeceptionModule implements DbInterface
     public $connections = [];
 
     /**
-     * @var \PDO
+     * @var string
      */
     protected $currentConnection;
 
