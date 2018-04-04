@@ -101,7 +101,7 @@ class MultiDb extends CodeceptionModule implements DbInterface
     public $connections = [];
 
     /**
-     * @var \PDO
+     * @var string
      */
     protected $currentConnection;
 
@@ -658,5 +658,13 @@ class MultiDb extends CodeceptionModule implements DbInterface
     public function amLoadDump($connection)
     {
         $this->loadDump($connection);
+    }
+
+    /**
+     * @return Driver
+     */
+    public function getCurrentDriver()
+    {
+        return $this->currentDriver;
     }
 }
