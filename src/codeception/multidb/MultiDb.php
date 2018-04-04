@@ -101,6 +101,8 @@ class MultiDb extends CodeceptionModule implements DbInterface
     public $connections = [];
 
     /**
+     * Connection name.
+     *
      * @var string
      */
     protected $currentConnection;
@@ -169,6 +171,10 @@ class MultiDb extends CodeceptionModule implements DbInterface
             if (!array_key_exists('reconnect', $connectionConfig)) {
                 $this->config['connections'][$db]['reconnect'] = false;
             }
+
+            if (!array_key_exists('primary', $connectionConfig)) {
+                $this->config['connections'][$db]['primary'] = false;
+            }
         }
     }
 
@@ -201,6 +207,10 @@ class MultiDb extends CodeceptionModule implements DbInterface
         if ($validConfig) {
             foreach ($this->config['connections'] as $db => $connectionConfig) {
                 $this->connect($db);
+
+                if (array_key_exists('primary', $connectionConfig) && $connectionConfig['primary']) {
+                    $this->amConnectedToDatabase($db);
+                }
 
                 if ($connectionConfig['dump'] && ($connectionConfig['populate'] || $connectionConfig['cleanup'])) {
                     $this->readSql($db);
@@ -339,6 +349,10 @@ class MultiDb extends CodeceptionModule implements DbInterface
         $this->checkConfig();
 
         foreach ($this->config['connections'] as $db => $connectionConfig) {
+            if (array_key_exists('primary', $connectionConfig) && $connectionConfig['primary']) {
+                $this->amConnectedToDatabase($db);
+            }
+
             if ($connectionConfig['reconnect']) {
                 $this->connect($db);
             }
@@ -394,7 +408,7 @@ class MultiDb extends CodeceptionModule implements DbInterface
      * ?>
      * ```
      *
-     * @param $database string
+     * @param string $database
      */
     public function amConnectedToDatabase($database)
     {
