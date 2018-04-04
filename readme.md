@@ -34,9 +34,16 @@ modules:
            reconnect: true
  ```
  
- Before actions with base you need to select Db like or you must define one of the connections as the primary.
+ Before actions with base you need to select Db like
+ 
  ```
  $I->amConnectedToDb('primary')
+ ```
+ 
+ or you must define one of the connections as primary with
+ 
+ ```
+ primary: true
  ```
  
  Aleksandr Kozhevnikov &copy; 2017
