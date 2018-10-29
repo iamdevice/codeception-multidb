@@ -349,12 +349,12 @@ class MultiDb extends CodeceptionModule implements DbInterface
         $this->checkConfig();
 
         foreach ($this->config['connections'] as $db => $connectionConfig) {
-            if (array_key_exists('primary', $connectionConfig) && $connectionConfig['primary']) {
-                $this->amConnectedToDatabase($db);
-            }
-
             if ($connectionConfig['reconnect']) {
                 $this->connect($db);
+            }
+            
+            if (array_key_exists('primary', $connectionConfig) && $connectionConfig['primary']) {
+                $this->amConnectedToDatabase($db);
             }
 
             if ($connectionConfig['cleanup'] && !$this->populated[$db]) {
